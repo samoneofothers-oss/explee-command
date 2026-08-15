@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Explee Command Center — Account Management OS</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/fontsource/css/inter@latest/index.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/fontsource/css/space-grotesk@latest/index.css">
+<script>
+tailwind.config={theme:{extend:{
+  fontFamily:{sans:['Inter','sans-serif'],display:['Space Grotesk','sans-serif']},
+  colors:{ink:'#000000',edge:'#1e1e22',edge2:'#2a2a2e'}
+}}};
+</script>
+<style>
+  html,body{background:#000;color:#f5f5f6;font-family:'Inter',sans-serif}
+  ::-webkit-scrollbar{width:8px;height:8px}::-webkit-scrollbar-thumb{background:#26262a;border-radius:8px}::-webkit-scrollbar-track{background:transparent}
+  .card{background:#000;border:1px solid #1e1e22;border-radius:24px;transition:border-color .25s}
+  .card:hover{border-color:#2e2e33}
+  .tile{background:#000;border:1px solid #232327;border-radius:16px}
+  .chip{display:inline-flex;align-items:center;gap:.45rem;background:transparent;border:1px solid #2a2a2e;border-radius:999px;padding:.38rem .85rem;font-size:.72rem;color:#a1a1aa}
+  .chip-live{color:#34d399;border-color:rgba(52,211,153,.35)}
+  .chip-off{color:#8b8b93;border-color:#2a2a2e}
+  .chip-warn{color:#fbbf24;border-color:rgba(251,191,36,.35)}
+  .chip-rose{color:#fb7185;border-color:rgba(251,113,133,.35)}
+  .chip-calc{color:#22d3ee;border-color:rgba(34,211,238,.35)}
+  .arrow-btn{width:34px;height:34px;border-radius:12px;background:#000;border:1px solid #2a2a2e;color:#a1a1aa;display:inline-flex;align-items:center;justify-content:center;transition:all .2s;flex-shrink:0}
+  .arrow-btn:hover{color:#fff;border-color:#7c5cff;transform:translate(2px,-2px)}
+  .nav-item{display:flex;align-items:center;gap:.8rem;width:100%;padding:.68rem 1rem;border-radius:999px;font-size:.83rem;color:#8b8b93;border:1px solid transparent;transition:all .2s}
+  .nav-item:hover{color:#fff}
+  .nav-item.on{background:#fff;color:#000;font-weight:600}
+  .icon-btn{width:40px;height:40px;border-radius:12px;background:#000;border:1px solid #2a2a2e;color:#c9c9cf;display:inline-flex;align-items:center;justify-content:center;transition:all .2s;flex-shrink:0}
+  .icon-btn:hover{color:#fff;border-color:#44444c}
+  .field{width:100%;background:transparent;border:1px solid #2a2a2e;border-radius:14px;padding:.7rem 1rem;font-size:.85rem;color:#fff;outline:none;transition:border .2s}
+  .field:focus{border-color:#ff7a1a}
+  .grad-btn{background:linear-gradient(135deg,#ff7a1a,#ff9440);color:#111;font-weight:700;border-radius:14px;transition:all .25s}
+  .grad-btn:hover{filter:brightness(1.1);box-shadow:0 10px 30px -10px rgba(255,122,26,.5)}
+  .violet-btn{background:linear-gradient(135deg,#7c5cff,#9d7bff);color:#fff;font-weight:600;border-radius:14px;transition:all .25s}
+  .violet-btn:hover{filter:brightness(1.12);box-shadow:0 10px 30px -10px rgba(124,92,255,.5)}
+  .badge{display:inline-flex;align-items:center;gap:.35rem;padding:.22rem .6rem;border-radius:999px;font-size:.65rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+  .num{font-family:'Space Grotesk';font-weight:500;letter-spacing:-.02em}
+  .limit-pill{border:1px solid rgba(255,122,26,.35);background:rgba(255,122,26,.08);border-radius:14px;padding:.35rem .8rem;text-align:center;box-shadow:0 0 24px -8px rgba(255,122,26,.35)}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+  .fade-up{animation:fadeUp .45s cubic-bezier(.2,.7,.3,1) both}
+  .d1{animation-delay:.05s}.d2{animation-delay:.1s}.d3{animation-delay:.15s}.d4{animation-delay:.2s}.d5{animation-delay:.25s}
+  @keyframes pulseDot{0%,100%{opacity:1}50%{opacity:.3}}
+  .live{animation:pulseDot 1.6s infinite}
+  input,select,textarea{color-scheme:dark}
+  .seg{display:inline-flex;border:1px solid #2a2a2e;border-radius:999px;overflow:hidden}
+  .seg button{padding:.35rem .8rem;font-size:.68rem;color:#8b8b93;transition:all .2s}
+  .seg button.on-ex{background:rgba(52,211,153,.12);color:#34d399}
+  .seg button.on-cu{background:rgba(124,92,255,.14);color:#a78bfa}
+  details.reply summary{cursor:pointer;list-style:none}
+  details.reply summary::-webkit-details-marker{display:none}
+  .hist{max-height:110px;overflow-y:auto}
+</style>
+</head>
+<body class="antialiased min-h-screen">
+
+<div class="flex min-h-screen">
+  <div id="sb-overlay" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-30 hidden" onclick="closeSidebar()"></div>
+
+  <aside id="sidebar" class="fixed inset-y-0 left-0 z-40 w-72 shrink-0 bg-black border-r border-edge flex flex-col transition-transform duration-300 -translate-x-full lg:translate-x-0 lg:sticky lg:top-0 lg:h-screen">
+    <div class="p-5 flex items-center gap-3 border-b border-edge">
+      <div class="w-10 h-10 rounded-full bg-white flex items-center justify-center text-black text-lg">✳</div>
+      <div>
+        <div class="font-display font-bold text-white leading-tight">Explee <span class="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-violet-400">Command</span></div>
+        <div class="text-[10px] text-[#6b6b73] tracking-widest uppercase">Account Management OS</div>
+      </div>
+    </div>
+    <nav class="p-3 space-y-1.5">
+      <button type="button" id="nav-overview" onclick="go('overview')" class="nav-item"><i class="fa-solid fa-gauge-high w-4"></i>Main Dashboard</button>
+      <button type="button" id="nav-accounts" onclick="go('accounts')" class="nav-item"><i class="fa-solid fa-layer-group w-4"></i>Accounts</button>
+    </nav>
+    <div class="px-5 pt-3 pb-2 text-[10px] uppercase tracking-widest text-[#6b6b73]">Workspaces</div>
+    <div id="sb-accounts" class="px-3 space-y-1 overflow-y-auto flex-1"></div>
+    <div class="p-4 border-t border-edge space-y-3">
+      <button type="button" onclick="openAddAccount()" class="grad-btn w-full flex items-center justify-center gap-2 text-sm py-3"><i class="fa-solid fa-plus"></i>Capture Account</button>
+      <div class="flex items-center justify-between">
+        <button type="button" onclick="go('settings')" class="chip chip-off hover:text-white transition"><i class="fa-solid fa-gear"></i>Settings</button>
+        <span class="text-[10px] text-[#6b6b73]"><i class="fa-solid fa-database mr-1"></i><span id="store-mode">—</span></span>
+      </div>
+    </div>
+  </aside>
+
+  <div class="flex-1 min-w-0">
+    <header class="sticky top-0 z-20 bg-black/85 backdrop-blur border-b border-edge px-4 lg:px-8 py-3.5 flex items-center gap-3">
+      <button type="button" class="icon-btn lg:hidden" onclick="openSidebar()"><i class="fa-solid fa-bars"></i></button>
+      <div class="min-w-0">
+        <div id="hdr-title" class="font-display font-bold text-white truncate">Main Dashboard</div>
+        <div id="hdr-sub" class="text-[10px] text-[#6b6b73] truncate">Pure truth: API real + dated snapshots + reply log</div>
+      </div>
+      <div class="ml-auto flex items-center gap-2">
+        <button type="button" class="icon-btn" onclick="openReplyModal(null)" title="Log reply"><i class="fa-solid fa-reply"></i></button>
+        <button type="button" class="icon-btn" onclick="syncAll(true)" title="Sync all"><i class="fa-solid fa-rotate"></i></button>
+        <button type="button" onclick="openAddAccount()" class="w-10 h-10 rounded-full bg-gradient-to-br from-orange-500 to-fuchsia-600 flex items-center justify-center text-white text-sm font-bold shadow-[0_0_24px_-6px_rgba(255,122,26,.6)]" title="Capture account">+</button>
+      </div>
+    </header>
+    <main class="p-4 lg:p-8 max-w-[1280px] mx-auto pb-24">
+      <div id="view"></div>
+    </main>
+  </div>
+</div>
+
+<div id="modal-root"></div>
+<div id="toast-root" class="fixed bottom-6 right-4 z-[100] space-y-3 w-[340px] max-w-[92vw]"></div>
+
+<script>
+/* ══════════════════════════════════════════════════════════════
+   EXPLEE COMMAND CENTER v10 — FINAL • PURE TRUTH
+   • NO projections. Every number is: REAL (API) | REAL (dated
+     snapshot) | REAL (reply log) | EXACT MATH (spend=sent×$0.03,
+     rate=replies÷sent, runway=(credits−spend)÷budget)
+   • Snapshot = ONE field: TOTAL emails sent (all-time)
+   • Tiny date+value history for every tracked metric
+   • Primary KPIs: Sent Σ • Spend Σ • Replies Σ • Rate (all accounts)
+   • Deal queue + campaign winners + cost/reply
+══════════════════════════════════════════════════════════════ */
+'use strict';
+const API_BASE='/api/explee/public/api/v1';
+const PRICE_PER_EMAIL=0.03;
+
+const SafeStore=(()=>{const mem={};let useLocal=false;
+  try{const t='__kx__';window.localStorage.setItem(t,'1');window.localStorage.removeItem(t);useLocal=true;}catch(e){useLocal=false;}
+  return{mode:useLocal?'persistent':'memory',
+    get(k){if(useLocal){try{return window.localStorage.getItem(k)}catch(e){}}return(k in mem)?mem[k]:null},
+    set(k,v){if(useLocal){try{window.localStorage.setItem(k,v);return}catch(e){}}mem[k]=String(v)},
+    remove(k){if(useLocal){try{window.localStorage.removeItem(k);return}catch(e){}}delete mem[k]},
+    keys(){if(useLocal){try{return Object.keys(window.localStorage)}catch(e){}}return Object.keys(mem)}};
+})();
+
+const LS_ACC='kx_accounts', LS_LIVE='kx_live_', LS_PLAN='kx_plan_', LS_NOTES='kx_notes_', LS_SRC='kx_src_', LS_PUR='kx_purpose_', LS_META='kx_meta_', LS_SNAP='kx_snap_', LS_REPL='kx_replies';
+const WORDS=['Falcon','Atlas','Orion','Titan','Nova','Summit','Harbor','Crest','Pine','Oak','Stone','Reef','Peak','Vale','Forge','Grove','Brook','Field','Aster','Birch'];
+const GENERIC=['gmail','yahoo','outlook','hotmail','proton','protonmail','icloud','aol','gmx','mail'];
+let accounts=[], view='overview', selectedId=null, charts={}, liveMem={}, pendingName=null, purposeEdit=false;
+
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt=n=>Number(n||0).toLocaleString('en-US');
+const money=n=>'$'+Number(n||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+const maskKey=k=>k?k.slice(0,11)+'••••'+k.slice(-4):'';
+const uid=()=>Math.random().toString(36).slice(2,10);
+const timeAgo=ts=>{const s=Math.floor((Date.now()-ts)/1000);if(s<60)return'now';const m=Math.floor(s/60);if(m<60)return m+'m ago';const h=Math.floor(m/60);if(h<24)return h+'h ago';return Math.floor(h/24)+'d ago'};
+const dShort=ts=>new Date(ts).toLocaleDateString('en-US',{month:'short',day:'numeric'});
+const pad2=n=>String(n).padStart(2,'0');
+
+function autoName(email){
+  const [local,domain]=String(email).split('@');
+  let base='';
+  const root=(domain||'').split('.')[0].toLowerCase();
+  if(root&&!GENERIC.includes(root))base=root.replace(/[^a-zA-Z]/g,'');
+  if((!base||base.length<3)&&local){
+    const clean=local.replace(/[^a-zA-Z]/g,'').toLowerCase();
+    if(clean.length>=3&&!['info','contact','hello','team','support','admin','test','office'].includes(clean))base=clean;
+  }
+  if(!base||base.length<3)base=WORDS[Math.floor(Math.random()*WORDS.length)].toLowerCase();
+  return base[0].toUpperCase()+base.slice(1);
+}
+function randWord(){return WORDS[Math.floor(Math.random()*WORDS.length)]}
+
+function loadAccounts(){try{return JSON.parse(SafeStore.get(LS_ACC))||[]}catch(e){return[]}}
+function saveAccounts(){SafeStore.set(LS_ACC,JSON.stringify(accounts))}
+function nextNum(){return accounts.reduce((m,a)=>Math.max(m,a.num),0)+1}
+
+function getPlan(id){try{return JSON.parse(SafeStore.get(LS_PLAN+id))||[]}catch(e){return[]}}
+function setPlan(id,v){SafeStore.set(LS_PLAN+id,JSON.stringify(v))}
+function getNotes(id){try{return JSON.parse(SafeStore.get(LS_NOTES+id))||[]}catch(e){return[]}}
+function setNotes(id,v){SafeStore.set(LS_NOTES+id,JSON.stringify(v))}
+function getSrc(id){try{return JSON.parse(SafeStore.get(LS_SRC+id))||{}}catch(e){return{}}}
+function setSrc(id,v){SafeStore.set(LS_SRC+id,JSON.stringify(v))}
+function getMeta(id){try{return JSON.parse(SafeStore.get(LS_META+id))||{}}catch(e){return{}}}
+function setMeta(id,v){SafeStore.set(LS_META+id,JSON.stringify(v))}
+function getSnaps(id){try{return JSON.parse(SafeStore.get(LS_SNAP+id))||[]}catch(e){return[]}}
+function setSnaps(id,v){SafeStore.set(LS_SNAP+id,JSON.stringify(v))}
+function getReplies(){try{return JSON.parse(SafeStore.get(LS_REPL))||[]}catch(e){return[]}}
+function setReplies(v){SafeStore.set(LS_REPL,JSON.stringify(v))}
+function repliesFor(id){return getReplies().filter(r=>r.acctId===id)}
+
+/* live read-only API */
+function liveCacheGet(id){if(liveMem[id])return liveMem[id];const raw=SafeStore.get(LS_LIVE+id);if(raw){try{liveMem[id]=JSON.parse(raw)}catch(e){}}return liveMem[id]||null}
+function liveCacheSet(id,v){liveMem[id]=v;SafeStore.set(LS_LIVE+id,JSON.stringify(v))}
+async function fetchLive(acct,force){
+  if(!acct.apiKey)return{ok:false,reason:'no-key'};
+  const c=liveCacheGet(acct.id);
+  if(!force&&c&&c.ok&&Date.now()-c.at<60000)return c;
+  try{
+    const ctrl=new AbortController();const to=setTimeout(()=>ctrl.abort(),8000);
+    const h={'X-Explee-Key':acct.apiKey};
+    const [p,j]=await Promise.all([
+      fetch(API_BASE+'/autogtm/projects',{headers:h,signal:ctrl.signal}).then(r=>{if(!r.ok)throw 0;return r.json()}),
+      fetch(API_BASE+'/autogtm/campaigns',{headers:h,signal:ctrl.signal}).then(r=>{if(!r.ok)throw 0;return r.json()})
+    ]);
+    clearTimeout(to);
+    const res={ok:true,at:Date.now(),projects:p.projects||[],campaigns:j.campaigns||[]};
+    liveCacheSet(acct.id,res);return res;
+  }catch(e){return{ok:false,reason:'unreachable',at:Date.now()}}
+}
+function liveFor(acct){return liveCacheGet(acct.id)}
+function trackStatuses(a,live){
+  const meta=getMeta(a.id);
+  const cur={};live.campaigns.forEach(c=>cur[c.id]=c.status);
+  const outNow=Object.values(cur).filter(s=>s==='outreach').length;
+  if(outNow>0&&!meta.outreachFirstSeen)meta.outreachFirstSeen=Date.now();
+  const prev=meta.lastStatuses||{};
+  const outPrev=Object.values(prev).filter(s=>s==='outreach').length;
+  const halted=live.campaigns.filter(c=>prev[c.id]==='outreach'&&c.status!=='outreach').map(c=>c.name);
+  if(halted.length||(outPrev>0&&outNow===0))meta.haltAlert={at:Date.now(),names:halted.join(', ')||'all campaigns'};
+  if(outNow>0)meta.haltAlert=null;
+  meta.lastStatuses=cur;setMeta(a.id,meta);
+}
+async function syncAndTrack(acct,force){const r=await fetchLive(acct,force);if(r.ok)trackStatuses(acct,r);return r}
+
+/* ── TRUTH METRICS ── */
+function pulseFor(a,lv){
+  const snaps=getSnaps(a.id).slice().sort((x,y)=>x.at-y.at);
+  const last=snaps.length?snaps[snaps.length-1]:null;
+  const budget=lv&&lv.ok?lv.projects.reduce((s,p)=>s+(p.daily_budget_usd||0),0):0;
+  const sent=last?Number(last.sent)||0:null;
+  return{snaps,last,age:last?(Date.now()-last.at)/864e5:null,budget,sent,spent:sent!=null?sent*PRICE_PER_EMAIL:null,halted:!!getMeta(a.id).haltAlert};
+}
+function freshChip(age,halted){
+  if(age==null)return'<span class="chip chip-off"><i class="fa-regular fa-clock"></i>no snapshot</span>';
+  if(halted)return'<span class="chip chip-rose"><i class="fa-solid fa-triangle-exclamation"></i>halted • re-check</span>';
+  const cls=age<=2?'chip-live':age<=5?'chip-warn':'chip-rose';
+  return'<span class="chip '+cls+'"><i class="fa-regular fa-clock"></i>'+(age<1?'today':age.toFixed(1)+'d old')+'</span>';
+}
+function runwayFor(a,lv){
+  const meta=getMeta(a.id);const credits=Number(meta.credits)||30;
+  const p=pulseFor(a,lv);
+  const spend=p.spent!=null?p.spent:0;
+  const left=Math.max(0,credits-spend);
+  return{credits,budget:p.budget,spend,left,daysLeft:p.budget?left/p.budget:null,pct:credits?Math.min(100,Math.round(spend/credits*100)):0,hasSnap:p.spent!=null};
+}
+function histRows(snaps){
+  return snaps.slice().reverse().map(s=>'<div class="flex items-center justify-between text-[10px] text-[#6b6b73] py-0.5"><span>'+dShort(s.at)+' <span class="text-[#4b4b52]">• '+timeAgo(s.at)+'</span></span><span class="num text-[#a1a1aa]">'+fmt(s.sent)+' sent • '+money((Number(s.sent)||0)*PRICE_PER_EMAIL)+'</span></div>').join('');
+}
+
+const STATUS={
+  outreach:{label:'Outreach',cls:'bg-emerald-500/10 text-emerald-400 border border-emerald-500/25',color:'#34d399',icon:'fa-satellite-dish'},
+  review:{label:'Review',cls:'bg-amber-500/10 text-amber-400 border border-amber-500/25',color:'#fbbf24',icon:'fa-hourglass-half'},
+  completed:{label:'Completed',cls:'bg-sky-500/10 text-sky-400 border border-sky-500/25',color:'#38bdf8',icon:'fa-flag-checkered'},
+  paused:{label:'Paused',cls:'bg-zinc-500/10 text-zinc-400 border border-zinc-500/25',color:'#a1a1aa',icon:'fa-pause'}
+};
+function statusBadge(st){const m=STATUS[st]||STATUS.review;return'<span class="badge '+m.cls+'"><i class="fa-solid '+m.icon+'"></i>'+m.label+'</span>'}
+const NOTE_TYPES={idea:{icon:'fa-lightbulb',color:'#fbbf24',label:'Idea'},todo:{icon:'fa-list-check',color:'#34d399',label:'To-Do'},access:{icon:'fa-key',color:'#22d3ee',label:'Access'},warning:{icon:'fa-triangle-exclamation',color:'#fb7185',label:'Warning'},note:{icon:'fa-note-sticky',color:'#a78bfa',label:'Note'}};
+const REPLY_STATUS={interested:{label:'Interested',color:'#34d399',icon:'fa-fire'},ooo:{label:'Out of office',color:'#fbbf24',icon:'fa-plane'},followup:{label:'Follow-up later',color:'#22d3ee',icon:'fa-clock'},question:{label:'Question',color:'#a78bfa',icon:'fa-circle-question'},notafit:{label:'Not a fit',color:'#fb7185',icon:'fa-xmark'}};
+function replyBadge(st){const m=REPLY_STATUS[st]||REPLY_STATUS.question;return'<span class="badge" style="color:'+m.color+';border:1px solid '+m.color+'44"><i class="fa-solid '+m.icon+'"></i>'+m.label+'</span>'}
+
+function toast(msg,icon,color){
+  const el=document.createElement('div');
+  el.className='card px-4 py-3 flex items-center gap-3 fade-up text-sm text-white';
+  el.innerHTML='<i class="fa-solid '+(icon||'fa-circle-check')+' text-'+(color||'emerald')+'-400"></i><span>'+esc(msg)+'</span>';
+  $('toast-root').appendChild(el);
+  setTimeout(()=>{el.style.transition='all .4s';el.style.opacity='0';el.style.transform='translateX(24px)';setTimeout(()=>el.remove(),400)},3400);
+}
+function openModal(html){
+  $('modal-root').innerHTML='<div class="fixed inset-0 z-50 flex items-center justify-center p-4" onclick="if(event.target===this)closeModal()"><div class="absolute inset-0 bg-black/80 backdrop-blur-sm"></div><div class="relative card w-full max-w-lg p-6 lg:p-7 fade-up max-h-[90vh] overflow-y-auto">'+html+'</div></div>';
+}
+function closeModal(){$('modal-root').innerHTML=''}
+function openSidebar(){$('sidebar').classList.remove('-translate-x-full');$('sb-overlay').classList.remove('hidden')}
+function closeSidebar(){$('sidebar').classList.add('-translate-x-full');$('sb-overlay').classList.add('hidden')}
+function chipDate(){return'<span class="chip"><i class="fa-regular fa-calendar"></i>'+new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})+'</span>'}
+function arrowBtn(fn){return'<button type="button" class="arrow-btn" onclick="'+(fn||'void(0)')+'"><i class="fa-solid fa-arrow-up-right"></i></button>'}
+
+function go(v,id){
+  view=v;if(id)selectedId=id;
+  closeSidebar();purposeEdit=false;
+  ['overview','accounts'].forEach(n=>{const el=$('nav-'+n);if(el)el.classList.toggle('on',view===n||(view==='account'&&n==='accounts'))});
+  const titles={overview:['Main Dashboard','Pure truth across all workspaces'],accounts:['Accounts','Capture & manage Explee workspaces'],settings:['Settings','Storage, data policy & API map'],account:['Workspace','Dedicated account dashboard']};
+  const t=titles[view]||titles.overview;
+  $('hdr-title').textContent=t[0];$('hdr-sub').textContent=t[1];
+  renderSidebar();render();
+  if(view==='account'){const a=accounts.find(x=>x.id===selectedId);if(a&&a.apiKey)syncAndTrack(a,false).then(()=>render())}
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function renderSidebar(){
+  $('sb-accounts').innerHTML=accounts.length?accounts.map(a=>{
+    const lv=liveFor(a);
+    const dot=a.apiKey?(lv&&lv.ok?'bg-emerald-400':'bg-amber-400'):'bg-zinc-600';
+    return'<button type="button" onclick="go(\'account\',\''+a.id+'\')" class="nav-item" style="padding:.5rem .9rem;border-radius:14px;'+(selectedId===a.id&&view==='account'?'border-color:#2a2a2e;color:#fff':'')+'"><span class="w-2 h-2 rounded-full '+dot+' live shrink-0"></span><span class="truncate text-[13px]">'+esc(a.name)+'</span><span class="ml-auto text-[9px] text-[#6b6b73]">#'+pad2(a.num)+'</span></button>';
+  }).join(''):'<div class="px-3 py-2 text-[11px] text-[#6b6b73]">No workspaces captured yet.</div>';
+  $('store-mode').textContent=SafeStore.mode;
+}
+function render(){
+  Object.keys(charts).forEach(k=>{charts[k].destroy();delete charts[k]});
+  const root=$('view');
+  if(view==='overview')root.innerHTML=renderOverview();
+  else if(view==='accounts')root.innerHTML=renderAccounts();
+  else if(view==='account')root.innerHTML=renderAccount();
+  else root.innerHTML=renderSettings();
+  drawCharts();
+}
+
+/* ═════════ OVERVIEW ═════════ */
+function allLive(){return accounts.map(a=>({a,lv:liveFor(a)}))}
+function renderOverview(){
+  if(!accounts.length){
+    return'<div class="card p-10 lg:p-16 text-center fade-up mt-4"><div class="w-16 h-16 mx-auto rounded-full bg-white flex items-center justify-center text-black text-2xl mb-6">✳</div><h1 class="font-display text-2xl lg:text-3xl font-bold">Capture your first Explee account</h1><p class="text-sm text-[#8b8b93] mt-3 max-w-md mx-auto">Email → auto codename → API key. Then track sent, spend, replies, runway, playbooks & notes for every workspace. Pure truth only.</p><button type="button" onclick="openAddAccount()" class="grad-btn mt-7 px-7 py-3 text-sm inline-flex items-center gap-2"><i class="fa-solid fa-plus"></i>Capture Account</button></div>';
+  }
+  const rows=allLive();
+  const liveRows=rows.filter(r=>r.lv&&r.lv.ok);
+  const projects=liveRows.reduce((s,r)=>s+r.lv.projects.length,0);
+  const budget=liveRows.reduce((s,r)=>s+r.lv.projects.reduce((x,p)=>x+(p.daily_budget_usd||0),0),0);
+  const camps=liveRows.flatMap(r=>r.lv.campaigns);
+  const outreach=camps.filter(c=>c.status==='outreach').length;
+  const pulses=rows.map(r=>({a:r.a,p:pulseFor(r.a,r.lv)}));
+  const totSent=pulses.reduce((s,x)=>s+(x.p.sent||0),0);
+  const totSpend=totSent*PRICE_PER_EMAIL;
+  const reps=getReplies();
+  const rate=totSent?(reps.length/totSent*100):null;
+  const costPerReply=reps.length?totSpend/reps.length:null;
+  const dealQueue=reps.filter(r=>r.status==='interested'||r.status==='question').sort((a,b)=>b.at-a.at);
+  const byCamp={};reps.forEach(r=>{const k=r.campaign||'Untagged';byCamp[k]=(byCamp[k]||0)+1});
+  const winners=Object.keys(byCamp).map(k=>({k,n:byCamp[k]})).sort((a,b)=>b.n-a.n).slice(0,4);
+  const maxWin=winners.length?winners[0].n:1;
+
+  /* PRIMARY TRUTH KPIs */
+  let html='<div class="grid grid-cols-2 xl:grid-cols-4 gap-3 lg:gap-4">';
+  html+='<div class="card p-5 fade-up"><div class="flex items-start justify-between"><div class="w-9 h-9 rounded-xl bg-gradient-to-br from-orange-500 to-amber-400 flex items-center justify-center text-black text-xs shadow-[0_0_24px_-6px_rgba(255,122,26,.6)]"><i class="fa-solid fa-paper-plane"></i></div><span class="chip chip-live">Σ all workspaces</span></div><div class="mt-4 num text-[32px] text-white leading-none">'+fmt(totSent)+'</div><div class="text-[11px] text-[#8b8b93] mt-2">Emails sent <span class="text-[#6b6b73]">• all-time, real snapshots</span></div></div>';
+  html+='<div class="card p-5 fade-up d1"><div class="flex items-start justify-between"><div class="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-green-400 flex items-center justify-center text-black text-xs shadow-[0_0_24px_-6px_rgba(52,211,153,.6)]"><i class="fa-solid fa-coins"></i></div><span class="chip chip-calc">sent × $0.03</span></div><div class="mt-4 num text-[32px] text-white leading-none">'+money(totSpend)+'</div><div class="text-[11px] text-[#8b8b93] mt-2">Spend <span class="text-[#6b6b73]">• exact math</span></div></div>';
+  html+='<div class="card p-5 fade-up d2"><div class="flex items-start justify-between"><div class="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center text-white text-xs shadow-[0_0_24px_-6px_rgba(168,85,247,.6)]"><i class="fa-solid fa-reply"></i></div><span class="chip chip-live">reply log</span></div><div class="mt-4 num text-[32px] text-white leading-none">'+fmt(reps.length)+'</div><div class="text-[11px] text-[#8b8b93] mt-2">Replies <span class="text-[#6b6b73]">• '+fmt(dealQueue.length)+' in deal queue</span></div></div>';
+  html+='<div class="card p-5 fade-up d3"><div class="flex items-start justify-between"><div class="w-9 h-9 rounded-xl bg-gradient-to-br from-sky-500 to-cyan-400 flex items-center justify-center text-black text-xs shadow-[0_0_24px_-6px_rgba(56,189,248,.6)]"><i class="fa-solid fa-percent"></i></div><span class="chip chip-calc">replies ÷ sent</span></div><div class="mt-4 num text-[32px] text-white leading-none">'+(rate==null?'—':rate.toFixed(1)+'%')+'</div><div class="text-[11px] text-[#8b8b93] mt-2">Reply rate <span class="text-[#6b6b73]">• cost/reply '+(costPerReply==null?'—':money(costPerReply))+'</span></div></div>';
+  html+='</div>';
+
+  /* SECONDARY REAL KPIs */
+  html+='<div class="grid grid-cols-2 xl:grid-cols-4 gap-3 lg:gap-4 mt-3">';
+  html+='<div class="card p-4 fade-up d2"><div class="flex items-start justify-between"><span class="text-[10px] uppercase tracking-widest text-[#6b6b73]">Accounts</span>'+(liveRows.length?'<span class="chip chip-live">'+liveRows.length+'/'+accounts.length+' live</span>':'<span class="chip chip-off">not synced</span>')+'</div><div class="mt-2 num text-xl text-white">'+fmt(accounts.length)+'</div></div>';
+  html+='<div class="card p-4 fade-up d2"><div class="flex items-start justify-between"><span class="text-[10px] uppercase tracking-widest text-[#6b6b73]">Projects</span><span class="chip chip-live">REAL</span></div><div class="mt-2 num text-xl text-white">'+fmt(projects)+'</div></div>';
+  html+='<div class="card p-4 fade-up d3"><div class="flex items-start justify-between"><span class="text-[10px] uppercase tracking-widest text-[#6b6b73]">Daily budget</span><span class="chip chip-live">REAL</span></div><div class="mt-2 num text-xl text-white">'+money(budget)+'</div></div>';
+  html+='<div class="card p-4 fade-up d3"><div class="flex items-start justify-between"><span class="text-[10px] uppercase tracking-widest text-[#6b6b73]">Outreach</span><span class="chip chip-off">'+fmt(camps.length)+' total</span></div><div class="mt-2 num text-xl text-emerald-400">'+fmt(outreach)+'</div></div>';
+  html+='</div>';
+
+  /* DEAL QUEUE + REPLY FEED */
+  html+='<div class="grid lg:grid-cols-3 gap-4 mt-4">';
+  html+='<div class="card p-6 lg:col-span-2 fade-up d2" style="border-color:rgba(52,211,153,.25)"><div class="flex items-center justify-between mb-4"><h3 class="font-display font-semibold text-white"><i class="fa-solid fa-fire text-emerald-400 mr-2"></i>Deal queue — chase these</h3><span class="chip chip-live">'+dealQueue.length+'</span></div>'+
+  (dealQueue.length?dealQueue.slice(0,4).map(r=>{const a=accounts.find(x=>x.id===r.acctId);return'<div class="tile p-4 mb-2 flex flex-wrap items-center gap-3">'+replyBadge(r.status)+'<div class="min-w-0 flex-1"><div class="text-sm text-white truncate">'+esc(r.leadName||r.leadEmail)+' <span class="text-[#6b6b73]">• '+esc(a?a.name:'?')+' • '+esc(r.campaign||'')+'</span></div><div class="text-[10px] text-[#8b8b93] truncate">'+esc(r.replyText||'')+'</div></div><span class="text-[9px] text-[#6b6b73]">'+timeAgo(r.at)+'</span><button type="button" class="arrow-btn" onclick="go(\'account\',\''+r.acctId+'\')"><i class="fa-solid fa-arrow-right"></i></button></div>'}).join(''):'<div class="text-sm text-[#6b6b73]">No interested/question replies yet. When a prospect bites, it lands here first.</div>')+'</div>';
+  html+='<div class="card p-6 fade-up d3"><div class="flex items-center justify-between mb-4"><h3 class="font-display font-semibold text-white">Reply feed</h3><button type="button" class="chip chip-off hover:text-white" onclick="openReplyModal(null)"><i class="fa-solid fa-plus"></i>Log</button></div>'+
+  (reps.length?reps.slice().sort((a,b)=>b.at-a.at).slice(0,5).map(r=>{const a=accounts.find(x=>x.id===r.acctId);return'<div class="tile p-3 mb-2"><div class="flex items-center justify-between gap-2">'+replyBadge(r.status)+'<span class="text-[9px] text-[#6b6b73]">'+dShort(r.at)+'</span></div><div class="text-xs text-white mt-1.5 truncate">'+esc(r.leadName||r.leadEmail)+' <span class="text-[#6b6b73]">• '+esc(a?a.name:'?')+'</span></div></div>'}).join(''):'<div class="text-sm text-[#6b6b73]">Nothing logged yet.</div>')+'</div>';
+  html+='</div>';
+
+  /* CHARTS + WINNERS */
+  html+='<div class="grid lg:grid-cols-3 gap-4 mt-4">';
+  html+='<div class="card p-6 fade-up d2"><div class="flex items-center justify-between mb-4"><h3 class="font-display font-semibold text-white">Campaign pipeline</h3>'+arrowBtn()+'</div>'+(camps.length?'<div class="h-56"><canvas id="c-donut"></canvas></div>':'<div class="h-56 flex flex-col items-center justify-center text-[#6b6b73] text-sm gap-2"><i class="fa-solid fa-plug-circle-xmark text-xl"></i>Sync accounts with API keys</div>')+'</div>';
+  html+='<div class="card p-6 fade-up d3"><div class="flex items-center justify-between mb-4"><h3 class="font-display font-semibold text-white">Campaigns per workspace</h3><span class="chip chip-off">status split</span></div>'+(camps.length?'<div class="h-64"><canvas id="c-bar"></canvas></div>':'<div class="h-64 flex items-center justify-center text-[#6b6b73] text-sm">No live data yet</div>')+'</div>';
+  html+='<div class="card p-6 fade-up d4"><div class="flex items-center justify-between mb-4"><h3 class="font-display font-semibold text-white">Reply winners</h3><span class="chip chip-off">by campaign</span></div>'+
+  (winners.length?winners.map(w=>'<div class="mb-3"><div class="flex items-center justify-between text-xs mb-1"><span class="text-white truncate">'+esc(w.k)+'</span><span class="num text-emerald-400">'+w.n+'</span></div><div class="h-1.5 rounded-full bg-[#141416]"><div class="h-1.5 rounded-full bg-gradient-to-r from-emerald-500 to-cyan-400" style="width:'+Math.round(w.n/maxWin*100)+'%"></div></div></div>').join(''):'<div class="text-sm text-[#6b6b73]">Log replies to see which campaign angle wins.</div>')+'</div>';
+  html+='</div>';
+
+  /* WORKSPACES */
+  html+='<div class="card p-6 mt-4 fade-up d4"><div class="flex items-center justify-between mb-4"><h3 class="font-display font-semibold text-white">Workspaces</h3><button type="button" class="chip chip-off hover:text-white" onclick="go(\'accounts\')">Manage <i class="fa-solid fa-arrow-right"></i></button></div><div class="space-y-3">'+
+  rows.map(r=>{
+    const c=r.lv&&r.lv.ok?r.lv.campaigns:[];
+    const out=c.filter(x=>x.status==='outreach').length;
+    const p=pulseFor(r.a,r.lv);
+    return'<div class="tile p-4 flex flex-wrap items-center gap-3">'+
+      '<div class="w-10 h-10 rounded-full bg-gradient-to-br from-orange-500 to-fuchsia-600 flex items-center justify-center text-white text-xs font-bold">'+esc(r.a.name[0].toUpperCase())+'</div>'+
+      '<div class="min-w-0 flex-1"><div class="text-sm font-semibold text-white truncate">'+esc(r.a.name)+' <span class="text-[9px] text-[#6b6b73]">#'+pad2(r.a.num)+'</span></div><div class="text-[11px] text-[#6b6b73] truncate">'+esc(r.a.email)+'</div></div>'+
+      '<div class="hidden md:block text-right"><div class="num text-sm text-white">'+fmt(p.sent||0)+'</div><div class="text-[9px] text-[#6b6b73] uppercase tracking-widest">sent</div></div>'+
+      '<div class="hidden md:block text-right"><div class="num text-sm text-white">'+money((p.sent||0)*PRICE_PER_EMAIL)+'</div><div class="text-[9px] text-[#6b6b73] uppercase tracking-widest">spend</div></div>'+
+      '<div class="hidden md:block text-right"><div class="num text-sm text-emerald-400">'+fmt(repliesFor(r.a.id).length)+'</div><div class="text-[9px] text-[#6b6b73] uppercase tracking-widest">replies</div></div>'+
+      freshChip(p.age,p.halted)+
+      (r.a.apiKey?(r.lv&&r.lv.ok?'<span class="chip chip-live"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400 live"></span>LIVE</span>':'<span class="chip chip-warn"><i class="fa-solid fa-triangle-exclamation"></i>Unreachable</span>'):'<span class="chip chip-off"><i class="fa-solid fa-key"></i>No key</span>')+
+      '<button type="button" class="arrow-btn" onclick="go(\'account\',\''+r.a.id+'\')"><i class="fa-solid fa-arrow-right"></i></button></div>';
+  }).join('')+'</div></div>';
+  return html;
+}
+
+/* ═════════ ACCOUNTS ═════════ */
+function renderAccounts(){
+  let html='<div class="flex flex-wrap items-center justify-between gap-3"><h2 class="font-display text-xl font-bold text-white">Captured workspaces</h2><button type="button" onclick="openAddAccount()" class="grad-btn px-5 py-2.5 text-sm inline-flex items-center gap-2"><i class="fa-solid fa-plus"></i>Capture Account</button></div>';
+  html+='<div class="grid md:grid-cols-2 gap-4 mt-5">';
+  accounts.forEach((a,i)=>{
+    const lv=liveFor(a);
+    const out=lv&&lv.ok?lv.campaigns.filter(c=>c.status==='outreach').length:0;
+    const p=pulseFor(a,lv);
+    const rr=repliesFor(a.id).length;
+    html+='<div class="card p-6 fade-up d'+(i%4+1)+'">'+
+      '<div class="flex items-start justify-between gap-3"><div class="flex items-center gap-3 min-w-0"><div class="w-11 h-11 rounded-full bg-gradient-to-br from-orange-500 to-fuchsia-600 flex items-center justify-center text-white font-bold shadow-[0_0_28px_-8px_rgba(255,122,26,.7)]">'+esc(a.name[0].toUpperCase())+'</div><div class="min-w-0"><div class="font-display font-semibold text-white truncate">'+esc(a.name)+' <span class="text-[9px] text-[#6b6b73]">#'+pad2(a.num)+'</span></div><div class="text-xs text-[#8b8b93] truncate">'+esc(a.email)+(a.password?' <i class="fa-solid fa-key text-[10px] text-cyan-400"></i>':'')+'</div></div></div>'+
+      (a.apiKey?(lv&&lv.ok?'<span class="chip chip-live"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400 live"></span>LIVE</span>':'<span class="chip chip-warn"><i class="fa-solid fa-triangle-exclamation"></i>Sync</span>'):'<span class="chip chip-off"><i class="fa-solid fa-key"></i>No key</span>')+'</div>'+
+      '<div class="tile mt-4 px-3 py-2.5 flex items-center justify-between text-xs text-[#8b8b93]"><code class="truncate">'+(a.apiKey?maskKey(a.apiKey):'API key not attached')+'</code>'+(a.apiKey?'<button type="button" class="text-[#6b6b73] hover:text-white ml-2" onclick="copyKey(\''+a.id+'\')"><i class="fa-regular fa-copy"></i></button>':'')+'</div>'+
+      '<div class="grid grid-cols-4 gap-2 mt-4 text-center">'+
+      '<div class="tile py-3"><div class="num text-lg text-white">'+fmt(lv&&lv.ok?lv.projects.length:0)+'</div><div class="text-[9px] text-[#6b6b73] uppercase tracking-widest">Projects</div></div>'+
+      '<div class="tile py-3"><div class="num text-lg text-emerald-400">'+fmt(out)+'</div><div class="text-[9px] text-[#6b6b73] uppercase tracking-widest">Outreach</div></div>'+
+      '<div class="tile py-3"><div class="num text-lg text-white">'+fmt(p.sent||0)+'</div><div class="text-[9px] text-[#6b6b73] uppercase tracking-widest">Sent</div></div>'+
+      '<div class="tile py-3"><div class="num text-lg text-emerald-400">'+fmt(rr)+'</div><div class="text-[9px] text-[#6b6b73] uppercase tracking-widest">Replies</div></div></div>'+
+      '<div class="flex justify-center mt-3">'+freshChip(p.age,p.halted)+'</div>'+
+      '<div class="flex gap-2 mt-5"><button type="button" onclick="go(\'account\',\''+a.id+'\')" class="violet-btn flex-1 py-2.5 text-sm">Open <i class="fa-solid fa-arrow-right ml-1"></i></button><button type="button" class="icon-btn" onclick="openEditAccount(\''+a.id+'\')"><i class="fa-solid fa-pen text-xs"></i></button><button type="button" class="icon-btn hover:text-rose-400" onclick="confirmRemove(\''+a.id+'\')"><i class="fa-solid fa-trash-can text-xs"></i></button></div></div>';
+  });
+  html+='<button type="button" onclick="openAddAccount()" class="rounded-3xl border-2 border-dashed border-edge hover:border-orange-500/60 transition flex flex-col items-center justify-center gap-3 text-[#8b8b93] hover:text-white min-h-[240px]"><i class="fa-solid fa-plus text-2xl"></i><span class="text-sm font-medium">Capture another workspace</span></button>';
+  html+='</div>';
+  return html;
+}
+
+/* ═════════ ACCOUNT DETAIL ═════════ */
+function renderAccount(){
+  const a=accounts.find(x=>x.id===selectedId);
+  if(!a)return renderAccounts();
+  const lv=liveFor(a);
+  const notes=getNotes(a.id);
+  const meta=getMeta(a.id);
+  const p=pulseFor(a,lv);
+  const rw=runwayFor(a,lv);
+  const reps=repliesFor(a.id);
+  const rate=p.sent?(reps.length/p.sent*100):null;
+  const costPerReply=reps.length?(p.spent||0)/reps.length:null;
+  const byCamp={};reps.forEach(r=>{const k=r.campaign||'Untagged';byCamp[k]=(byCamp[k]||0)+1});
+
+  let html='<div class="flex flex-wrap items-center justify-between gap-3 fade-up">'+
+    '<div class="flex items-center gap-3 min-w-0"><button type="button" class="icon-btn" onclick="go(\'accounts\')"><i class="fa-solid fa-arrow-left"></i></button><div class="w-12 h-12 rounded-full bg-gradient-to-br from-orange-500 to-fuchsia-600 flex items-center justify-center text-white font-bold text-lg shadow-[0_0_28px_-8px rgba(255,122,26,.7)]">'+esc(a.name[0].toUpperCase())+'</div><div class="min-w-0"><h2 class="font-display text-xl lg:text-2xl font-bold text-white truncate">'+esc(a.name)+' <span class="text-[10px] text-[#6b6b73]">#'+pad2(a.num)+'</span></h2><div class="text-xs text-[#8b8b93] truncate">'+esc(a.email)+(a.password?' • <i class="fa-solid fa-key text-cyan-400"></i> pwd stored':'')+'</div></div></div>'+
+    '<div class="flex items-center gap-2 flex-wrap">'+(a.apiKey?(lv&&lv.ok?'<span class="chip chip-live"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400 live"></span>LIVE • '+timeAgo(lv.at)+'</span>':'<span class="chip chip-warn"><i class="fa-solid fa-triangle-exclamation"></i>Unreachable</span>'):'<span class="chip chip-off"><i class="fa-solid fa-key"></i>No API key</span>')+
+    '<button type="button" class="icon-btn" onclick="syncOne(\''+a.id+'\')"><i class="fa-solid fa-rotate"></i></button><button type="button" class="icon-btn" onclick="openEditAccount(\''+a.id+'\')"><i class="fa-solid fa-pen"></i></button></div></div>';
+
+  if(meta.haltAlert){
+    html+='<div class="card p-4 mt-4 fade-up flex items-center gap-3" style="border-color:rgba(251,113,133,.4)"><i class="fa-solid fa-triangle-exclamation text-rose-400"></i><div class="text-xs text-gray-200 flex-1"><b class="text-rose-300">Outreach halted '+timeAgo(meta.haltAlert.at)+'.</b> '+esc(meta.haltAlert.names)+' left outreach status — possible credit exhaustion or manual stop. Verify in the Explee app.</div><button type="button" class="text-[#6b6b73] hover:text-white" onclick="dismissHalt(\''+a.id+'\')"><i class="fa-solid fa-xmark"></i></button></div>';
+  }
+
+  if(!a.apiKey){
+    html+='<div class="card p-8 mt-5 text-center fade-up d1"><i class="fa-solid fa-key text-2xl text-amber-400"></i><h3 class="font-display font-semibold mt-3 text-white">Attach the API key to pull real data</h3><p class="text-xs text-[#8b8b93] mt-2 max-w-sm mx-auto">Read-only: projects, daily budgets, campaign names, IDs & statuses.</p><button type="button" onclick="openEditAccount(\''+a.id+'\')" class="grad-btn mt-5 px-6 py-2.5 text-sm">Attach API key</button></div>';
+  }else if(lv&&lv.ok){
+    const out=lv.campaigns.filter(c=>c.status==='outreach').length;
+    const totBudget=lv.projects.reduce((s,x)=>s+(x.daily_budget_usd||0),0);
+    html+='<div class="grid lg:grid-cols-3 gap-4 mt-5">';
+    html+='<div class="card p-5 fade-up d1"><div class="flex items-center justify-between"><span class="text-[10px] uppercase tracking-widest text-[#6b6b73]">Daily budget</span><span class="chip chip-live">REAL</span></div><div class="num text-[34px] text-white mt-2 leading-none">'+money(totBudget)+'<span class="text-sm text-[#6b6b73]">/day</span></div><div class="text-[11px] text-[#8b8b93] mt-3">'+fmt(lv.projects.length)+' project'+(lv.projects.length===1?'':'s')+' • '+lv.projects.map(x=>'#'+x.id).join(', ')+'</div></div>';
+    html+='<div class="card p-5 fade-up d2"><div class="flex items-center justify-between"><span class="text-[10px] uppercase tracking-widest text-[#6b6b73]">Outreach campaigns</span><span class="chip chip-live">REAL</span></div><div class="num text-[34px] text-white mt-2 leading-none">'+fmt(out)+'</div><div class="text-[11px] text-[#8b8b93] mt-3">of '+fmt(lv.campaigns.length)+' total campaigns</div></div>';
+    html+='<div class="card p-5 fade-up d3" style="border-color:rgba(34,211,238,.25)"><div class="flex items-center justify-between"><span class="text-[10px] uppercase tracking-widest text-[#6b6b73]">Credits left</span><span class="chip chip-calc">exact math</span></div>'+
+      '<div class="flex items-end justify-between mt-2"><div class="num text-[34px] text-white leading-none">'+money(rw.left)+'<span class="text-sm text-[#6b6b73]"> of $'+rw.credits+'</span></div>'+
+      '<div class="flex items-center gap-1"><input id="credits-input" class="field" style="width:70px;padding:.3rem .6rem;font-size:.8rem" type="number" min="1" value="'+rw.credits+'"><button type="button" class="icon-btn" style="width:32px;height:32px" onclick="saveCredits(\''+a.id+'\')"><i class="fa-solid fa-check text-[10px]"></i></button></div></div>'+
+      '<div class="h-1.5 rounded-full bg-[#141416] mt-3"><div class="h-1.5 rounded-full '+(rw.pct>=90?'bg-rose-500':rw.pct>=60?'bg-amber-400':'bg-cyan-400')+'" style="width:'+rw.pct+'%"></div></div>'+
+      '<div class="text-[10px] text-[#6b6b73] mt-2">'+rw.pct+'% burned ('+money(rw.spend)+') • '+(rw.daysLeft!=null?'≈'+rw.daysLeft.toFixed(1)+' days left at $'+totBudget+'/day':'set a snapshot to unlock runway')+'</div></div>';
+    html+='</div>';
+
+    /* PULSE + REPLIES */
+    html+='<div class="grid lg:grid-cols-2 gap-4 mt-4">';
+    html+='<div class="card p-6 fade-up d2"><div class="flex flex-wrap items-center justify-between gap-2 mb-4"><h3 class="font-display font-semibold text-white"><i class="fa-solid fa-wave-square text-cyan-400 mr-2"></i>Pulse — snapshots</h3><div class="flex gap-2">'+freshChip(p.age,p.halted)+'<button type="button" class="chip chip-off hover:text-white" onclick="openSnapModal(\''+a.id+'\')"><i class="fa-solid fa-plus"></i>Log snapshot</button></div></div>'+
+    (p.last?'<div class="grid grid-cols-2 gap-2 text-center"><div class="tile py-3"><div class="num text-2xl text-white">'+fmt(p.sent)+'</div><div class="text-[9px] text-[#6b6b73] uppercase tracking-widest">emails sent (real)</div></div><div class="tile py-3"><div class="num text-2xl text-white">'+money(p.spent)+'</div><div class="text-[9px] text-[#6b6b73] uppercase tracking-widest">spend (sent × $0.03)</div></div></div>'+
+    '<div class="mt-4"><div class="text-[9px] uppercase tracking-widest text-[#6b6b73] mb-1">History</div><div class="hist">'+histRows(p.snaps)+'</div></div>'
+    :'<div class="text-sm text-[#6b6b73]">No snapshots yet. Open Explee → copy the TOTAL "Emails sent" → log it. Spend calculates itself.</div>')+'</div>';
+
+    html+='<div class="card p-6 fade-up d3"><div class="flex flex-wrap items-center justify-between gap-2 mb-4"><h3 class="font-display font-semibold text-white"><i class="fa-solid fa-inbox text-emerald-400 mr-2"></i>Replies <span class="chip chip-live">'+reps.length+'</span></h3><button type="button" class="chip chip-off hover:text-white" onclick="openReplyModal(\''+a.id+'\')"><i class="fa-solid fa-plus"></i>Log reply</button></div>'+
+    '<div class="grid grid-cols-2 gap-2 text-center mb-4"><div class="tile py-3"><div class="num text-xl text-white">'+(rate==null?'—':rate.toFixed(1)+'%')+'</div><div class="text-[9px] text-[#6b6b73] uppercase tracking-widest">reply rate</div></div><div class="tile py-3"><div class="num text-xl text-white">'+(costPerReply==null?'—':money(costPerReply))+'</div><div class="text-[9px] text-[#6b6b73] uppercase tracking-widest">cost / reply</div></div></div>'+
+    (Object.keys(byCamp).length?'<div class="text-[9px] uppercase tracking-widest text-[#6b6b73] mb-1">By campaign</div><div class="mb-3">'+Object.keys(byCamp).map(k=>'<div class="flex items-center justify-between text-[10px] text-[#8b8b93] py-0.5"><span class="truncate">'+esc(k)+'</span><span class="num text-emerald-400">'+byCamp[k]+'</span></div>').join('')+'</div>':'')+
+    (reps.length?'<div class="hist">'+reps.slice().sort((x,y)=>y.at-x.at).map(r=>'<details class="reply tile p-3.5 mb-2"><summary class="flex items-center justify-between gap-2">'+replyBadge(r.status)+'<span class="text-xs text-white truncate flex-1 text-left">'+esc(r.leadName||r.leadEmail)+' <span class="text-[#6b6b73]">• '+esc(r.campaign||'')+'</span></span><span class="text-[9px] text-[#6b6b73] shrink-0">'+dShort(r.at)+' <i class="fa-solid fa-chevron-down ml-1"></i></span></summary>'+
+    '<div class="mt-3 space-y-2 text-xs"><div class="text-[9px] uppercase tracking-widest text-[#6b6b73]">Lead</div><div class="text-gray-200">'+esc(r.leadName||'—')+' • '+esc(r.leadEmail||'—')+(r.domain?' • '+esc(r.domain):'')+'</div>'+
+    (r.sentText?'<div class="text-[9px] uppercase tracking-widest text-[#6b6b73]">We sent</div><div class="tile p-2.5 text-[#a1a1aa] whitespace-pre-wrap" style="border-color:#232327">'+esc(r.sentText)+'</div>':'')+
+    (r.replyText?'<div class="text-[9px] uppercase tracking-widest text-[#6b6b73]">They replied</div><div class="tile p-2.5 text-gray-200 whitespace-pre-wrap" style="border-color:rgba(52,211,153,.3)">'+esc(r.replyText)+'</div>':'')+
+    '<div class="flex justify-end"><button type="button" class="text-[#6b6b73] hover:text-rose-400" onclick="delReply(\''+r.id+'\')"><i class="fa-solid fa-trash-can text-[10px]"></i></button></div></div></details>').join('')+'</div>':'<div class="text-sm text-[#6b6b73]">Nothing logged yet.</div>')+'</div>';
+    html+='</div>';
+
+    /* CAMPAIGNS */
+    html+='<div class="card p-6 mt-4 fade-up d2"><div class="flex items-center justify-between mb-4"><h3 class="font-display font-semibold text-white">Campaigns <span class="text-xs text-[#6b6b73]">('+lv.campaigns.length+')</span></h3><span class="chip chip-off">read-only</span></div>'+
+      (lv.campaigns.length?'<div class="grid md:grid-cols-2 gap-3">'+lv.campaigns.map(c=>'<div class="tile p-4"><div class="flex items-start justify-between gap-3"><div class="min-w-0"><div class="text-sm font-semibold text-white truncate">'+esc(c.name)+'</div><div class="mt-1.5">'+statusBadge(c.status)+'</div></div><div class="limit-pill shrink-0"><div class="num text-lg text-orange-300 leading-none">$'+fmt(c.daily_limit_usd)+'</div><div class="text-[8px] uppercase tracking-widest text-orange-400/80 mt-1">per day</div></div></div><div class="text-[10px] text-[#6b6b73] mt-3 flex flex-wrap gap-3"><span>#'+c.id+'</span><span>project #'+c.project_id+'</span>'+(c.target_url?'<span class="truncate">'+esc(c.target_url)+'</span>':'')+'</div></div>').join('')+'</div>':'<div class="text-sm text-[#6b6b73]">No campaigns in this workspace yet.</div>')+'</div>';
+  }else{
+    html+='<div class="card p-8 mt-5 text-center fade-up d1"><i class="fa-solid fa-plug-circle-xmark text-2xl text-amber-400"></i><h3 class="font-display font-semibold mt-3 text-white">Proxy unreachable</h3><p class="text-xs text-[#8b8b93] mt-2">Open the Render deployment (same-origin proxy) and retry.</p><button type="button" onclick="syncOne(\''+a.id+'\')" class="violet-btn mt-5 px-6 py-2.5 text-sm"><i class="fa-solid fa-rotate mr-2"></i>Retry sync</button></div>';
+    html+='<div class="grid lg:grid-cols-2 gap-4 mt-4"><div class="card p-6 fade-up d2"><div class="flex items-center justify-between mb-4"><h3 class="font-display font-semibold text-white">Pulse</h3><button type="button" class="chip chip-off hover:text-white" onclick="openSnapModal(\''+a.id+'\')"><i class="fa-solid fa-plus"></i>Log snapshot</button></div>'+(p.last?'<div class="text-xs text-gray-200">Last: '+fmt(p.sent)+' sent • '+money(p.spent)+' <span class="text-[#6b6b73]">('+dShort(p.last.at)+')</span></div><div class="hist mt-2">'+histRows(p.snaps)+'</div>':'<div class="text-sm text-[#6b6b73]">No snapshots yet.</div>')+'</div><div class="card p-6 fade-up d3"><div class="flex items-center justify-between mb-4"><h3 class="font-display font-semibold text-white">Replies</h3><button type="button" class="chip chip-off hover:text-white" onclick="openReplyModal(\''+a.id+'\')"><i class="fa-solid fa-plus"></i>Log reply</button></div><div class="text-sm text-[#6b6b73]">'+reps.length+' logged.</div></div></div>';
+  }
+
+  /* PLAYBOOK */
+  const purpose=SafeStore.get(LS_PUR+a.id)||'';
+  const srcMap=getSrc(a.id);
+  const camps=lv&&lv.ok?lv.campaigns:[];
+  const plan=getPlan(a.id);
+  html+='<div class="card p-6 mt-4 fade-up d3"><div class="flex items-center justify-between mb-5"><h3 class="font-display font-semibold text-white"><i class="fa-solid fa-bullseye text-orange-400 mr-2"></i>Playbook</h3><span class="chip chip-off">purpose • lead sources • plans</span></div>';
+  html+='<div class="tile p-5"><div class="flex items-center justify-between mb-2"><span class="text-[10px] uppercase tracking-widest text-[#6b6b73]">Workspace purpose</span>'+(purposeEdit?'<button type="button" class="chip chip-off hover:text-white" onclick="purposeEdit=false;render()">Cancel</button>':'<button type="button" class="arrow-btn" onclick="purposeEdit=true;render()"><i class="fa-solid fa-pen text-[10px]"></i></button>')+'</div>'+
+  (purposeEdit?'<textarea id="purpose-text" class="field" rows="3" placeholder="What is this workspace working on? e.g. Sign 1 HVAC client via missed-call angle…">'+esc(purpose)+'</textarea><button type="button" class="grad-btn mt-3 px-5 py-2 text-sm" onclick="savePurpose(\''+a.id+'\')">Save purpose</button>'
+  :(purpose?'<p class="text-sm text-gray-200 leading-relaxed">'+esc(purpose)+'</p>':'<p class="text-sm text-[#6b6b73]">No purpose set — define what this workspace is working on.</p>'))+'</div>';
+  html+='<div class="tile p-5 mt-3"><div class="flex items-center justify-between mb-3"><span class="text-[10px] uppercase tracking-widest text-[#6b6b73]">Lead source per campaign</span><span class="chip chip-off">default: Explee itself</span></div>'+
+  (camps.length?camps.map(c=>{const v=srcMap[c.id]||'explee';return'<div class="flex flex-wrap items-center justify-between gap-2 py-2.5 border-b border-edge last:border-0"><div class="text-xs text-white font-medium truncate">'+esc(c.name)+' '+statusBadge(c.status)+'</div><div class="seg"><button type="button" class="'+(v==='explee'?'on-ex':'')+'" onclick="setLeadSrc(\''+a.id+'\','+c.id+',\'explee\')"><i class="fa-solid fa-robot mr-1"></i>Explee itself</button><button type="button" class="'+(v==='custom'?'on-cu':'')+'" onclick="setLeadSrc(\''+a.id+'\','+c.id+',\'custom\')"><i class="fa-solid fa-upload mr-1"></i>Custom upload</button></div></div>'}).join(''):'<p class="text-sm text-[#6b6b73]">Sync with an API key to tag lead sources per campaign.</p>')+'</div>';
+  html+='<div class="tile p-5 mt-3"><div class="flex items-center justify-between mb-3"><span class="text-[10px] uppercase tracking-widest text-[#6b6b73]">Plans & ideas</span><span class="chip chip-off">'+plan.length+'</span></div>'+
+  '<div class="flex gap-2 flex-wrap mb-4"><select id="plan-tag" class="field" style="width:auto;max-width:220px"><option value="general">Workspace (general)</option>'+camps.map(c=>'<option value="'+esc(c.name)+'">'+esc(c.name)+'</option>').join('')+'</select><input id="plan-text" class="field flex-1 min-w-[160px]" placeholder="Add a plan, idea or campaign purpose…"><button type="button" class="grad-btn px-4 py-2.5 text-sm" onclick="addPlan(\''+a.id+'\')"><i class="fa-solid fa-plus"></i></button></div>'+
+  '<div class="space-y-2">'+plan.slice().reverse().map(pp=>{const isGen=pp.tag==='general';return'<div class="tile p-3.5 flex items-start gap-3" style="border-color:'+(isGen?'#232327':'rgba(255,122,26,.3)')+'"><span class="badge shrink-0 '+(isGen?'text-[#8b8b93] border border-edge':'text-orange-300 border border-orange-500/30')+'"><i class="fa-solid '+(isGen?'fa-globe':'fa-rocket')+'"></i>'+esc(isGen?'Workspace':pp.tag)+'</span><div class="text-xs text-gray-200 flex-1">'+esc(pp.text)+'</div><span class="text-[9px] text-[#6b6b73] shrink-0">'+dShort(pp.createdAt)+'</span><button type="button" class="text-[#6b6b73] hover:text-rose-400 shrink-0" onclick="delPlan(\''+a.id+'\',\''+pp.id+'\')"><i class="fa-solid fa-xmark text-[10px]"></i></button></div>'}).join('')||'<p class="text-sm text-[#6b6b73]">Nothing yet — add the first plan or tag a campaign purpose.</p>'+'</div></div></div>';
+
+  /* NOTES */
+  html+='<div class="card p-6 mt-4 fade-up d4"><div class="flex items-center justify-between mb-4"><h3 class="font-display font-semibold text-white"><i class="fa-solid fa-notes-medical text-violet-400 mr-2"></i>Team Notes</h3><span class="chip chip-off">'+notes.length+'</span></div>'+
+  '<div class="flex gap-2 flex-wrap mb-4"><select id="note-type" class="field" style="width:auto">'+Object.keys(NOTE_TYPES).map(k=>'<option value="'+k+'">'+NOTE_TYPES[k].label+'</option>').join('')+'</select><input id="note-text" class="field flex-1 min-w-[160px]" placeholder="Write a note… (login codes, observations, next actions)"><button type="button" class="violet-btn px-4 py-2.5 text-sm" onclick="addNote(\''+a.id+'\')"><i class="fa-solid fa-plus"></i></button></div>'+
+  '<div class="grid md:grid-cols-2 gap-3">'+notes.slice().sort((x,y)=>(y.pinned?1:0)-(x.pinned?1:0)||y.createdAt-x.createdAt).map(n=>{const t=NOTE_TYPES[n.type]||NOTE_TYPES.note;
+    return'<div class="tile p-4" style="border-color:'+t.color+'44;border-left:3px solid '+t.color+'"><div class="flex items-center justify-between"><span class="badge" style="color:'+t.color+';border:1px solid '+t.color+'44"><i class="fa-solid '+t.icon+'"></i>'+t.label+'</span><div class="flex items-center gap-2"><span class="text-[9px] text-[#6b6b73]">'+dShort(n.createdAt)+'</span><button type="button" class="'+(n.pinned?'text-amber-400':'text-[#6b6b73] hover:text-amber-400')+'" onclick="pinNote(\''+a.id+'\',\''+n.id+'\')"><i class="fa-solid fa-thumbtack text-[10px]"></i></button><button type="button" class="text-[#6b6b73] hover:text-rose-400" onclick="delNote(\''+a.id+'\',\''+n.id+'\')"><i class="fa-solid fa-xmark text-[10px]"></i></button></div></div><div class="text-sm text-gray-200 mt-2 whitespace-pre-wrap">'+esc(n.text)+'</div></div>';
+  }).join('')||(notes.length?'':'<div class="text-sm text-[#6b6b73] md:col-span-2">No notes yet — capture access details, ideas and to-dos.</div>')+'</div></div>';
+  return html;
+}
+
+/* ═════════ SETTINGS ═════════ */
+function renderSettings(){
+  return'<div class="grid lg:grid-cols-2 gap-4">'+
+  '<div class="card p-7 fade-up"><h3 class="font-display text-lg mb-4 text-white"><i class="fa-solid fa-shield-halved text-orange-400 mr-2"></i>Data policy — pure truth</h3><ul class="space-y-3 text-sm text-[#a1a1aa]">'+
+  '<li class="flex gap-3"><i class="fa-solid fa-eye text-emerald-400 mt-1"></i><b class="text-white">REAL (API).</b>&nbsp;Daily budgets, campaign $ limits, statuses, counts. Read-only.</li>'+
+  '<li class="flex gap-3"><i class="fa-solid fa-keyboard text-cyan-400 mt-1"></i><b class="text-white">REAL (you).</b>&nbsp;One dated snapshot field: TOTAL emails sent. Replies via the reply log.</li>'+
+  '<li class="flex gap-3"><i class="fa-solid fa-calculator text-violet-400 mt-1"></i><b class="text-white">EXACT MATH.</b>&nbsp;Spend = sent × $0.03 • rate = replies ÷ sent • cost/reply • credits left = credits − spend • runway = left ÷ budget.</li>'+
+  '<li class="flex gap-3"><i class="fa-solid fa-ban text-rose-400 mt-1"></i><b class="text-white">NO projections.</b>&nbsp;Nothing estimated, nothing fake. History (date + value) kept for every tracked metric.</li></ul>'+
+  '<div class="flex gap-2 mt-6"><button type="button" onclick="exportVault()" class="violet-btn px-4 py-2.5 text-sm"><i class="fa-solid fa-download mr-2"></i>Export vault</button><button type="button" onclick="wipeVault()" class="px-4 py-2.5 text-sm rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 hover:bg-rose-500/20 transition"><i class="fa-solid fa-trash mr-2"></i>Wipe all</button></div></div>'+
+  '<div class="card p-7 fade-up d2"><h3 class="font-display text-lg mb-4 text-white"><i class="fa-solid fa-code text-violet-400 mr-2"></i>API surface used</h3><div class="space-y-2 text-[11px] font-mono">'+
+  [['GET','/autogtm/projects','Workspace IDs, domains, daily budgets'],['GET','/autogtm/campaigns','Campaign ID, name, status, daily limit']].map(e=>'<div class="flex items-center gap-3 tile px-3 py-2.5"><span class="badge bg-sky-500/10 text-sky-400 border border-sky-500/25">'+e[0]+'</span><span class="text-[#c9c9cf]">'+e[1]+'</span><span class="text-[#6b6b73] ml-auto text-right hidden sm:block">'+e[2]+'</span></div>').join('')+
+  '</div><div class="mt-4 text-[10px] text-[#6b6b73]">Not exposed by Explee: sent/reply counters & balance → covered by snapshots + reply log. Same-origin via Render proxy.</div></div></div>';
+}
+
+/* charts */
+const arcPills={id:'arcPills',afterDraw(ch){
+  const meta=ch.getDatasetMeta(0);if(!meta||!meta.data.length)return;
+  const ds=ch.data.datasets[0],total=ds.data.reduce((a,b)=>a+b,0)||1;const ctx=ch.ctx;
+  meta.data.forEach((arc,i)=>{const pct=Math.round(ds.data[i]/total*100)+'%';
+    const p=arc.getProps(['x','y','startAngle','endAngle','outerRadius'],true);
+    const mid=(p.startAngle+p.endAngle)/2,r=p.outerRadius+16,px=p.x+Math.cos(mid)*r,py=p.y+Math.sin(mid)*r;
+    ctx.save();ctx.font='700 10px Inter';const w=ctx.measureText(pct).width+16;
+    ctx.fillStyle='#fff';ctx.shadowColor='rgba(0,0,0,.5)';ctx.shadowBlur=8;
+    ctx.beginPath();if(ctx.roundRect)ctx.roundRect(px-w/2,py-10,w,20,10);else ctx.rect(px-w/2,py-10,w,20);ctx.fill();
+    ctx.shadowBlur=0;ctx.fillStyle='#111';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(pct,px,py);ctx.restore();});
+}};
+function centerText(txt,sub){return{id:'centerText',afterDraw(ch){
+  const meta=ch.getDatasetMeta(0);if(!meta.data[0])return;const p=meta.data[0].getProps(['x','y'],true);const ctx=ch.ctx;
+  ctx.save();ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.font='600 26px "Space Grotesk"';ctx.fillStyle='#fff';ctx.fillText(txt,p.x,p.y-6);
+  ctx.font='600 9px Inter';ctx.fillStyle='#6b6b73';ctx.fillText(sub.toUpperCase(),p.x,p.y+14);ctx.restore();}}}
+function drawCharts(){
+  if(typeof window.Chart==='undefined')return;
+  Chart.defaults.color='#8b8b93';Chart.defaults.font.family='Inter';
+  const rows=allLive().filter(r=>r.lv&&r.lv.ok);
+  const donut=$('c-donut'),bar=$('c-bar');
+  if(donut&&rows.length){
+    const st={outreach:0,review:0,completed:0,paused:0};
+    rows.forEach(r=>r.lv.campaigns.forEach(c=>{if(st[c.status]!=null)st[c.status]++}));
+    charts.donut=new Chart(donut,{type:'doughnut',data:{labels:Object.keys(st).map(k=>STATUS[k].label),datasets:[{data:Object.keys(st).map(k=>st[k]),backgroundColor:Object.keys(st).map(k=>STATUS[k].color),borderWidth:0,borderRadius:24,spacing:4}]},options:{responsive:true,maintainAspectRatio:false,cutout:'72%',plugins:{legend:{display:false}}},plugins:[arcPills,centerText(String(st.outreach),'outreach')]});
+  }
+  if(bar&&rows.length){
+    const labels=rows.map(r=>r.a.name.slice(0,10));
+    const ds=Object.keys(STATUS).map(k=>({label:STATUS[k].label,data:rows.map(r=>r.lv.campaigns.filter(c=>c.status===k).length),backgroundColor:k==='outreach'?'#ff7a1a':STATUS[k].color,borderRadius:10,borderSkipped:false,maxBarThickness:30}));
+    charts.bar=new Chart(bar,{type:'bar',data:{labels,datasets:ds},options:{responsive:true,maintainAspectRatio:false,scales:{x:{stacked:true,grid:{display:false},ticks:{font:{size:10}}},y:{stacked:true,grid:{color:'rgba(255,255,255,.05)'},ticks:{precision:0,font:{size:9}}}},plugins:{legend:{labels:{boxWidth:8,usePointStyle:true,font:{size:10}}}}}});
+  }
+}
+
+/* ═════════ MODALS & ACTIONS ═════════ */
+function openSnapModal(acctId){
+  openModal('<h3 class="font-display text-xl font-bold mb-1 text-white">Log snapshot</h3><p class="text-xs text-[#8b8b93] mb-5">One number: the TOTAL "Emails sent" from the Explee dashboard (all-time, not today). Spend calculates itself at $0.03/email.</p>'+
+  '<label class="text-[10px] uppercase tracking-widest text-[#6b6b73]">Total emails sent</label><input id="s-sent" class="field mt-1" type="number" min="0" placeholder="354">'+
+  '<div class="flex gap-2 mt-6"><button type="button" onclick="closeModal()" class="flex-1 rounded-xl border border-edge py-3 text-sm text-[#a1a1aa] hover:text-white transition">Cancel</button><button type="button" onclick="saveSnap(\''+acctId+'\')" class="flex-1 grad-btn py-3 text-sm">Save snapshot</button></div>');
+}
+function saveSnap(acctId){
+  const sent=Math.max(0,Math.round(Number($('s-sent').value)||0));
+  const snaps=getSnaps(acctId);snaps.push({id:uid(),at:Date.now(),sent});
+  setSnaps(acctId,snaps);closeModal();toast('Snapshot saved — '+fmt(sent)+' sent • '+money(sent*PRICE_PER_EMAIL)+' spend','fa-wave-square','cyan');render();
+}
+function openReplyModal(acctId){
+  const camps=acctId?(liveFor(accounts.find(x=>x.id===acctId))||{campaigns:[]}).campaigns:[];
+  openModal('<h3 class="font-display text-xl font-bold mb-1 text-white">Log a reply</h3><p class="text-xs text-[#8b8b93] mb-5">Full context: which workspace, which campaign, the lead, and both emails.</p>'+
+  '<div class="space-y-3">'+
+  '<select id="r-acct" class="field">'+accounts.map(a=>'<option value="'+a.id+'" '+(a.id===acctId?'selected':'')+'>'+esc(a.name)+' #'+pad2(a.num)+'</option>').join('')+'</select>'+
+  '<input id="r-camp" class="field" list="camp-list" placeholder="Campaign (e.g. HVAC contractors)"><datalist id="camp-list">'+camps.map(c=>'<option value="'+esc(c.name)+'">').join('')+'</datalist>'+
+  '<div class="grid grid-cols-2 gap-3"><input id="r-name" class="field" placeholder="Lead name"><input id="r-email" class="field" placeholder="Lead email"></div>'+
+  '<input id="r-domain" class="field" placeholder="Company domain (optional)">'+
+  '<select id="r-status" class="field">'+Object.keys(REPLY_STATUS).map(k=>'<option value="'+k+'">'+REPLY_STATUS[k].label+'</option>').join('')+'</select>'+
+  '<textarea id="r-sent" class="field" rows="2" placeholder="Exact email we sent (optional)"></textarea>'+
+  '<textarea id="r-reply" class="field" rows="3" placeholder="Exact reply we got"></textarea></div>'+
+  '<div class="flex gap-2 mt-6"><button type="button" onclick="closeModal()" class="flex-1 rounded-xl border border-edge py-3 text-sm text-[#a1a1aa] hover:text-white transition">Cancel</button><button type="button" onclick="saveReply()" class="flex-1 grad-btn py-3 text-sm">Save reply</button></div>');
+}
+function saveReply(){
+  const acctId=$('r-acct').value;
+  const leadName=$('r-name').value.trim(),leadEmail=$('r-email').value.trim();
+  if(!leadName&&!leadEmail){toast('Lead name or email required','fa-triangle-exclamation','amber');return}
+  const reps=getReplies();
+  reps.push({id:uid(),acctId,campaign:$('r-camp').value.trim(),leadName,leadEmail,domain:$('r-domain').value.trim(),status:$('r-status').value,sentText:$('r-sent').value.trim(),replyText:$('r-reply').value.trim(),at:Date.now()});
+  setReplies(reps);closeModal();toast('Reply logged — metrics updated','fa-reply','emerald');render();
+}
+function delReply(rid){setReplies(getReplies().filter(r=>r.id!==rid));toast('Reply deleted','fa-trash-can','rose');render()}
+function saveCredits(id){const meta=getMeta(id);meta.credits=Math.max(1,Number($('credits-input').value)||30);setMeta(id,meta);toast('Credits set to $'+meta.credits,'fa-stopwatch','cyan');render()}
+function dismissHalt(id){const meta=getMeta(id);meta.haltAlert=null;setMeta(id,meta);render()}
+function openAddAccount(){
+  pendingName=null;
+  openModal('<h3 class="font-display text-xl font-bold mb-1 text-white">Capture Explee workspace</h3><p class="text-xs text-[#8b8b93] mb-5">Codename auto-generates from the signup email (or a clean random word).</p>'+
+  '<div class="tile p-4 mb-4 flex items-center justify-between"><div><div class="text-[10px] uppercase tracking-widest text-[#6b6b73]">Auto codename</div><div id="codename-preview" class="font-display font-bold text-white text-lg">—</div></div><button type="button" class="icon-btn" onclick="rerollName()"><i class="fa-solid fa-dice"></i></button></div>'+
+  '<div class="space-y-3"><input id="f-email" class="field" type="email" placeholder="Signup email (used to log into Explee)" oninput="previewName()">'+
+  '<input id="f-pass" class="field" type="password" placeholder="Password (optional — Explee uses email codes)">'+
+  '<input id="f-key" class="field font-mono text-xs" placeholder="API key (optional now) • sk_explee_..."></div>'+
+  '<div class="flex gap-2 mt-6"><button type="button" onclick="closeModal()" class="flex-1 rounded-xl bg-transparent border border-edge py-3 text-sm text-[#a1a1aa] hover:text-white transition">Cancel</button><button type="button" onclick="addAccount()" class="flex-1 grad-btn py-3 text-sm">Capture <i class="fa-solid fa-plus ml-1"></i></button></div>');
+  previewName();
+}
+function previewName(){const el=$('codename-preview');if(!el)return;const email=$('f-email').value.trim();el.textContent=(pendingName||(email.includes('@')?autoName(email):'—'))+'  #'+pad2(nextNum());}
+function rerollName(){pendingName=randWord();previewName();}
+function addAccount(){
+  const email=$('f-email').value.trim(),pass=$('f-pass').value.trim(),key=$('f-key').value.trim();
+  if(!email||!email.includes('@')){toast('Signup email required','fa-triangle-exclamation','amber');return}
+  if(key&&!key.startsWith('sk_explee_')){toast('API key must start with sk_explee_','fa-triangle-exclamation','amber');return}
+  const acct={id:uid(),num:nextNum(),name:pendingName||autoName(email),email,password:pass,apiKey:key,addedAt:Date.now()};
+  accounts.push(acct);saveAccounts();closeModal();
+  toast('Captured '+acct.name+' #'+pad2(acct.num));
+  if(key)syncAndTrack(acct,true).then(()=>go('account',acct.id));else go('account',acct.id);
+}
+function openEditAccount(id){
+  const a=accounts.find(x=>x.id===id);if(!a)return;
+  openModal('<h3 class="font-display text-xl font-bold mb-1 text-white">Edit '+esc(a.name)+' #'+pad2(a.num)+'</h3><p class="text-xs text-[#8b8b93] mb-5">Display name optional.</p>'+
+  '<div class="space-y-3"><input id="e-name" class="field" value="'+esc(a.name)+'" placeholder="Display name">'+
+  '<input id="e-email" class="field" type="email" value="'+esc(a.email)+'">'+
+  '<input id="e-pass" class="field" type="password" value="'+esc(a.password||'')+'" placeholder="Password (optional)">'+
+  '<input id="e-key" class="field font-mono text-xs" value="'+esc(a.apiKey||'')+'" placeholder="API key • sk_explee_..."></div>'+
+  '<div class="flex gap-2 mt-6"><button type="button" onclick="closeModal()" class="flex-1 rounded-xl border border-edge py-3 text-sm text-[#a1a1aa] hover:text-white transition">Cancel</button><button type="button" onclick="saveEdit(\''+id+'\')" class="flex-1 grad-btn py-3 text-sm">Save</button></div>');
+}
+function saveEdit(id){
+  const a=accounts.find(x=>x.id===id);if(!a)return;
+  const name=$('e-name').value.trim(),email=$('e-email').value.trim(),pass=$('e-pass').value.trim(),key=$('e-key').value.trim();
+  if(!email||!email.includes('@')){toast('Signup email required','fa-triangle-exclamation','amber');return}
+  if(key&&!key.startsWith('sk_explee_')){toast('API key must start with sk_explee_','fa-triangle-exclamation','amber');return}
+  if(name)a.name=name;a.email=email;a.password=pass;a.apiKey=key;saveAccounts();closeModal();
+  toast('Saved '+a.name);
+  if(key)syncAndTrack(a,true).then(()=>{renderSidebar();render()});else{renderSidebar();render()}
+}
+function confirmRemove(id){
+  const a=accounts.find(x=>x.id===id);
+  openModal('<h3 class="font-display text-xl font-bold text-white">Remove '+esc(a.name)+' #'+pad2(a.num)+'?</h3><p class="text-sm text-[#8b8b93] mt-3">Deletes account, snapshots, replies, playbook & notes from this vault.</p><div class="flex gap-2 mt-6"><button type="button" onclick="closeModal()" class="flex-1 rounded-xl border border-edge py-3 text-sm text-[#a1a1aa] hover:text-white transition">Keep</button><button type="button" onclick="removeAccount(\''+id+'\')" class="flex-1 rounded-xl py-3 text-sm font-semibold bg-rose-500/15 border border-rose-500/35 text-rose-400 hover:bg-rose-500/25 transition">Remove</button></div>');
+}
+function removeAccount(id){
+  accounts=accounts.filter(a=>a.id!==id);
+  [LS_LIVE,LS_PLAN,LS_NOTES,LS_SRC,LS_PUR,LS_META,LS_SNAP].forEach(p=>SafeStore.remove(p+id));
+  setReplies(getReplies().filter(r=>r.acctId!==id));
+  delete liveMem[id];saveAccounts();closeModal();toast('Account removed','fa-trash-can','rose');go('accounts');
+}
+function copyKey(id){const a=accounts.find(x=>x.id===id);if(navigator.clipboard){navigator.clipboard.writeText(a.apiKey).catch(()=>{})}toast('API key copied','fa-copy','orange')}
+function syncOne(id){const a=accounts.find(x=>x.id===id);if(!a)return;if(!a.apiKey){toast('Attach an API key first','fa-key','amber');return}toast('Syncing '+a.name+'…','fa-rotate','cyan');syncAndTrack(a,true).then(r=>{toast(r.ok?'Live data refreshed':'Unreachable — check deployment',r.ok?'fa-check':'fa-triangle-exclamation',r.ok?'emerald':'amber');renderSidebar();render()})}
+function syncAll(force){
+  const withKey=accounts.filter(a=>a.apiKey);
+  if(!withKey.length){if(force)toast('No API keys attached yet','fa-key','amber');return}
+  Promise.all(withKey.map(a=>syncAndTrack(a,true))).then(()=>{if(force)toast('Sync complete','fa-check','emerald');renderSidebar();render()});
+}
+function savePurpose(id){SafeStore.set(LS_PUR+id,$('purpose-text').value.trim());purposeEdit=false;toast('Workspace purpose saved','fa-bullseye','orange');render()}
+function setLeadSrc(acctId,campId,v){const m=getSrc(acctId);m[campId]=v;setSrc(acctId,m);toast('Lead source: '+(v==='explee'?'Explee itself':'Custom upload'),'fa-route','cyan');render()}
+function addPlan(acctId){
+  const t=$('plan-text').value.trim();if(!t){toast('Write the plan first','fa-triangle-exclamation','amber');return}
+  const plan=getPlan(acctId);
+  plan.push({id:uid(),text:t,tag:$('plan-tag').value,createdAt:Date.now()});
+  setPlan(acctId,plan);render();
+}
+function delPlan(acctId,pid){setPlan(acctId,getPlan(acctId).filter(x=>x.id!==pid));render()}
+function addNote(acctId){
+  const t=$('note-text').value.trim();if(!t){toast('Note is empty','fa-triangle-exclamation','amber');return}
+  const notes=getNotes(acctId);
+  notes.push({id:uid(),type:$('note-type').value,text:t,pinned:false,createdAt:Date.now()});
+  setNotes(acctId,notes);render();
+}
+function pinNote(acctId,nid){const notes=getNotes(acctId);const n=notes.find(x=>x.id===nid);if(n){n.pinned=!n.pinned;setNotes(acctId,notes);render()}}
+function delNote(acctId,nid){setNotes(acctId,getNotes(acctId).filter(x=>x.id!==nid));render()}
+function exportVault(){
+  const payload={accounts,replies:getReplies(),snapshots:Object.fromEntries(accounts.map(a=>[a.id,getSnaps(a.id)])),playbooks:Object.fromEntries(accounts.map(a=>[a.id,{purpose:SafeStore.get(LS_PUR+a.id)||'',plans:getPlan(a.id),sources:getSrc(a.id),notes:getNotes(a.id),meta:getMeta(a.id)}])),exportedAt:new Date().toISOString()};
+  const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
+  const l=document.createElement('a');l.href=URL.createObjectURL(blob);l.download='explee-command-vault.json';l.click();toast('Vault exported');
+}
+function wipeVault(){SafeStore.keys().filter(k=>k.startsWith('kx_')).forEach(k=>SafeStore.remove(k));location.reload()}
+
+window.addEventListener('error',e=>{toast('App error: '+e.message,'fa-triangle-exclamation','rose')});
+(function init(){
+  try{
+    accounts=loadAccounts();
+    $('store-mode').textContent=SafeStore.mode;
+    go('overview');
+    syncAll(false);
+  }catch(e){toast('Boot error: '+e.message,'fa-triangle-exclamation','rose')}
+})();
+</script>
+</body>
+</html>
